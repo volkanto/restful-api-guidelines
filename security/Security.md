@@ -78,33 +78,12 @@ paths:
 Hint: you need not explicitly define the "Authorization" header; it is a standard header so to say implicitly defined via the security section.
 
 
-## {{ book.must }} Document supported access scenarios
-A service in the Zalando platform may support a couple of different access scenarios to support different use cases. Client and API endpoint developers must understand the different access scenarios and act accordingly: Client developers must send the required tokens depending on the access scenario they want to use. API endpoint developers must implement one or more access scenarios and document the supported access scenarios in order to help client developers to implement their clients.
+## {{ book.must }} Document supported access and data segregation scenarios
+A service in the Zalando platform may support a couple of different access and data segregation scenarios in order to support different use cases. The document [API Access Scenarios and Data Segregation](https://docs.google.com/a/zalando.de/document/d/12kns6aCaSITKdgvglyk_13a1UM1vCJVQAj6LzvMXHpc/edit?usp=sharing) gives an overview of existing scenarios in the Zalando Paltform.
 
-The following access scenarios exist:
+Supported access and data segregation scenarios must be documented per operation using the custom OpenAPI parameters `x-access-scenarios` and `x-data-segregation`, like shown in the following example:
 
-######service######
-Service to service communication to the Zalando platform or between two non-platform services. In this access scenario a service token (claim `"https://identity.zalando.com/realm": "services"`) must be send to the API endpoint carrying the required privileges to access the requested resource. The token must be send as a bearer token in the `Authorization` HTTP header. Data segregation based on business partners must be enforced: The business partner carried in the token (claim `https://identity.zalando.com/bp`) must be equal to the business partner owning the requested resource.
-
-######inner-platform######
-A Zalando platform service accessing a REST API of another service within the platform. This access scenario is basically the same as the `service` access scenario, except that platform services may get access to data of all business partners: The service token must therefore not only carry the required API-permissions, but must also carry the privilege `z::_platform` in order to access data of all business partners within the platform.
-
-######customer######
-This scenario describes a use case, where a service having direct customer interaction, calls a service of the platform to access customer data of this very customer (e.g. a customer interacting with a web shop). In this case two tokens must be send to the platform API endpoint: A service token of the service doing the call and a customer token identifying the customer (via a custom `X-Customer-Token` HTTP header field). The service token must carry the required privileges to access the API, the customer token is used to identify the customer. The platform service must only grant access to resources belonging to the business partner defined in the service token and to the customer carried in the the customer token (claim `iat`). If the business partner is not the owner of the data, the the customer token must carry an appropriate consent to access the requested customer data (claim `http://identity.zalando.com/approval`).
-
-######customer-all######
-The customer-all access scenario is designed for use cases where a service calling a platform service must have access to the data of all customers of one business partner. These are non-customer interactive use cases in general. Consumer facing applications usually have customer-interactive use cases and should use the customer access scenario instead (only having access to the data of the customer the service is interacting with). In the customer-all access scenario, the client service must send a service token to the platform carrying the required privileges to access this API and carry a privilege named 'z::_all-customer-data' to gain access to the data of all customers of the business partner.
-
-######impersonation######
-The impersonation access scenario supports use cases where customer care agents interact with e.g. a web shop in the name of the customer. Therefore the customer care agent must request a special user token carrying the impersonation information (which customer the agent is impersonating). This information is carried in the claim `http://identity.zalando.com/impersonating` in the user token. Client services must then send two tokens: The user token (send along in the `X-Customer-Token` HTTP header and carrying the impersonation information) and the service token. API endpoints supporting this access scenario must give access to the resources owned by the business partner carried in the service token and the customer referred to in the impersonation token.
-
-######user######
-This access scenario is used in use cases where developers access a REST API directly (e.g. for debugging during an incident scenario). In this use case the user must send its user token as a bearer token in the `Authorisation` HTTP header carrying the required permissions to access a resource of an API. The API must only hand out data belonging to the business partner carried in the user token, unless the token carries the privilege `z::_platform` which grants access to the data of all business partners.
-
-
-API provides must specify the supported access scenarios for each operation in their OpenAPI definitions using the custom `x-access-scenarios` parameter. Valid values are `service`, `inner-platform`, `customer`, `customer-all`, `impersonation` and `user`. An example for such a definition would be:
-
-```
+```yaml
 [...]
 paths:
   /my-resource/{id}:
@@ -115,6 +94,8 @@ paths:
 		[...]
       security:
         - oauth2: ['z::my-permission.read']
-      x-access-scenarios: ['inner-platform','service','customer','customer-all','impersonation','user']
+      x-access-scenarios: ['inner-platform','service','customer','customer-all',
+	     'impersonation','user']
+	  x-data-segregation: ['multi-tenant','inner-platform', 'all-customer']
 [...]
 ```
