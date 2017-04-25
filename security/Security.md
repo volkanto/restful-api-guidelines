@@ -94,8 +94,8 @@ paths:
 		[...]
       security:
         - oauth2: ['z::my-permission.read']
-      x-access-scenarios: ['inner-platform','service','customer','customer-all',
+      <b>x-access-scenarios: ['inner-platform','service','customer','customer-all',
 	     'impersonation','user']
-	  x-data-segregation: ['multi-tenant','inner-platform', 'all-customer']
+	  x-data-segregation: ['multi-tenant','inner-platform', 'all-customer']</b>
 [...]
 ```
